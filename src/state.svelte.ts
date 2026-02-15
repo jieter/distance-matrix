@@ -1,18 +1,13 @@
 import L from 'leaflet';
 
-// Constants for unit conversion
 const METERS_TO_NM = 0.000539957;
 
 class MarineState {
-    // 1. Reactive state using Runes
     locations = $state(JSON.parse(localStorage.getItem('marine_locations') || '') || []);
     hoveredIndices = $state([]);
 
-    // 2. Derived state: automatically recalculates when locations change
-    totalMarkers = $derived(this.locations.length);
-
     constructor() {
-        // 3. Persist state to localStorage automatically
+        // Persist state to localStorage automatically
         $effect.root(() => {
             $effect(() => {
                 const data = this.locations.map(({ name, lat, lng, color }) => ({
@@ -26,8 +21,7 @@ class MarineState {
         });
     }
 
-    // 4. Actions: Centralized logic to modify state
-    addLocation(latlng, color, isAutoNamed = true) {
+    addLocation(latlng, color) {
         const index = this.locations.length;
         const newLoc = {
             name: `Mark ${index + 1}`,
@@ -39,7 +33,7 @@ class MarineState {
             marker: null,
         };
         this.locations.push(newLoc);
-        // Automatically trigger geocode for new additions
+        // Attempt naming the mark using a geocoder.
         this.reverseGeocode(index);
     }
 
@@ -60,6 +54,9 @@ class MarineState {
 
     clearHover() {
         this.hoveredIndices = [];
+    }
+    clearAll() {
+        this.locations = [];
     }
 
     getDistance(locA, locB) {
