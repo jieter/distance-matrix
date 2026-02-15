@@ -1,5 +1,5 @@
 <script>
-import { marineState } from './state.svelte';
+import { marineState, distance } from './state.svelte';
 </script>
 
 <div id="table-side">
@@ -46,7 +46,7 @@ import { marineState } from './state.svelte';
                                 i !== j}
                             onmouseenter={() => i !== j && marineState.setHover(i, j)}
                             onmouseleave={() => marineState.clearHover()}>
-                            {i === j ? '-' : marineState.getDistance(loc, colLoc)}
+                            {i === j ? '-' : distance(loc, colLoc)}
                         </td>
                     {/each}
                 </tr>

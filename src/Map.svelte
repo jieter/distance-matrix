@@ -23,8 +23,7 @@ onMount(() => {
     }).addTo(map);
 
     map.on('click', (e) => {
-        const color = `hsl(${Math.random() * 360}, 70%, 45%)`;
-        marineState.addLocation(e.latlng, color);
+        marineState.addLocation(e.latlng);
     });
 });
 </script>

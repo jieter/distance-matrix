@@ -1,10 +1,24 @@
-import L from 'leaflet';
+export type Coord = { lat: number; lng: number };
 
-const METERS_TO_NM = 0.000539957;
+// Distance in nautical miles
+export function distance(coord1: Coord, coord2: Coord): number {
+    const R = 3440.065; // Earth's mean radius in Nautical Miles
 
+    const toRad = (deg: number): number => (deg * Math.PI) / 180;
+
+    const dLat = toRad(coord2.lat - coord1.lat);
+    const dLon = toRad(coord2.lng - coord1.lng);
+
+    const a =
+        Math.sin(dLat / 2) ** 2 + Math.cos(toRad(coord1.lat)) * Math.cos(toRad(coord2.lat)) * Math.sin(dLon / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return Math.round(R * c);
+}
 class MarineState {
     locations = $state(JSON.parse(localStorage.getItem('marine_locations') || '') || []);
-    hoveredIndices = $state([]);
+    hoveredIndices = $state<number[]>([]);
 
     constructor() {
         // Persist state to localStorage automatically
@@ -21,13 +35,13 @@ class MarineState {
         });
     }
 
-    addLocation(latlng, color) {
+    addLocation(latlng: Coord) {
         const index = this.locations.length;
         const newLoc = {
             name: `Mark ${index + 1}`,
             lat: latlng.lat,
             lng: latlng.lng,
-            color,
+            color: this.#generateColor(),
             isAutoNamed: true,
             loading: false,
             marker: null,
@@ -37,18 +51,18 @@ class MarineState {
         this.reverseGeocode(index);
     }
 
-    removeLocation(index) {
+    removeLocation(index: number) {
         const loc = this.locations[index];
         if (loc.marker) loc.marker.remove();
         this.locations.splice(index, 1);
     }
 
-    updateLocationPos(index, lat, lng) {
+    updateLocationPos(index: number, lat: Number, lng: Number) {
         this.locations[index].lat = lat;
         this.locations[index].lng = lng;
     }
 
-    setHover(i, j = null) {
+    setHover(i: number, j: number | null = null) {
         this.hoveredIndices = j !== null ? [i, j] : [i];
     }
 
@@ -59,12 +73,11 @@ class MarineState {
         this.locations = [];
     }
 
-    getDistance(locA, locB) {
-        const dist = L.latLng(locA.lat, locA.lng).distanceTo(L.latLng(locB.lat, locB.lng));
-        return Math.round(dist * METERS_TO_NM);
+    #generateColor() {
+        return `hsl(${Math.random() * 360}, 70%, 45%)`;
     }
 
-    async reverseGeocode(index) {
+    async reverseGeocode(index: number) {
         const loc = this.locations[index];
         if (!loc) return;
 
@@ -76,6 +89,7 @@ class MarineState {
             const data = await res.json();
             if (data.address) {
                 const address = data.address;
+                console.log(data);
                 const newName = address.city || address.water || address.town || address.state || loc.name;
 
                 loc.name = newName;
