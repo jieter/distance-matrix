@@ -17,7 +17,7 @@ export function distance(coord1: Coord, coord2: Coord): number {
     return Math.round(R * c);
 }
 class MarineState {
-    locations = $state(JSON.parse(localStorage.getItem('marine_locations') || '') || []);
+    locations = $state(JSON.parse(localStorage.getItem('marine_locations') || '[]') || []);
     hoveredIndices = $state<number[]>([]);
 
     constructor() {
@@ -89,7 +89,6 @@ class MarineState {
             const data = await res.json();
             if (data.address) {
                 const address = data.address;
-                console.log(data);
                 const newName = address.city || address.water || address.town || address.state || loc.name;
 
                 loc.name = newName;
