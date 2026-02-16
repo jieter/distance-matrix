@@ -12,7 +12,6 @@ export type Location = Coord & {
     marker: any;
 };
 
-
 // Distance in nautical miles
 export function distance(coord1: Coord, coord2: Coord): number {
     const R = 3440.065;
@@ -25,10 +24,26 @@ export function distance(coord1: Coord, coord2: Coord): number {
     return Math.round(R * c);
 }
 const PALETTE = [
-    '#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
-    '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4',
-    '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000',
-    '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9'
+    '#e6194B',
+    '#3cb44b',
+    '#ffe119',
+    '#4363d8',
+    '#f58231',
+    '#911eb4',
+    '#42d4f4',
+    '#f032e6',
+    '#bfef45',
+    '#fabed4',
+    '#469990',
+    '#dcbeff',
+    '#9A6324',
+    '#fffac8',
+    '#800000',
+    '#aaffc3',
+    '#808000',
+    '#ffd8b1',
+    '#000075',
+    '#a9a9a9',
 ];
 
 class MarineState {
@@ -38,22 +53,22 @@ class MarineState {
     constructor() {
         $effect.root(() => {
             $effect(() => {
-                const serialized = this.locations.map(l => {
-                    if (l == null){
-                        return '';
-                    }
-                    const name = l.isAutoNamed ? `*${l.name}` : l.name;
-                    const escapedName = name.replace(/\\/g, '\\\\')
-                                            .replace(/;/g, '\\;')
-                                            .replace(/\|/g, '\\|');
+                const serialized = this.locations
+                    .map((l) => {
+                        if (l == null) {
+                            return '';
+                        }
+                        const name = l.isAutoNamed ? `*${l.name}` : l.name;
+                        const escapedName = name.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/\|/g, '\\|');
 
-                    const lat = l.lat.toFixed(4);
-                    const lng = l.lng.toFixed(4);
-                    const colorIdx = PALETTE.indexOf(l.color);
-                    const c = colorIdx === -1 ? 0 : colorIdx;
+                        const lat = l.lat.toFixed(4);
+                        const lng = l.lng.toFixed(4);
+                        const colorIdx = PALETTE.indexOf(l.color);
+                        const c = colorIdx === -1 ? 0 : colorIdx;
 
-                    return `${escapedName};${lat};${lng};${c}`;
-                }).join('|');
+                        return `${escapedName};${lat};${lng};${c}`;
+                    })
+                    .join('|');
 
                 const newHash = serialized ? `#${encodeURI(serialized)}` : '';
                 window.history.replaceState(null, '', window.location.pathname + newHash);
@@ -72,27 +87,27 @@ class MarineState {
             const hash = decodeURI(window.location.hash.slice(1));
             if (!hash) return [];
             const waypointStrings = hash.split(/(?<!\\)\|/);
-            return waypointStrings.map(str => {
-                // Split by ; only if NOT preceded by \
-                const parts = str.split(/(?<!\\);/);
-                if (parts.length < 4) return null;
+            return waypointStrings
+                .map((str) => {
+                    // Split by ; only if NOT preceded by \
+                    const parts = str.split(/(?<!\\);/);
+                    if (parts.length < 4) return null;
 
-                let [rawName, lat, lng, colorIdx] = parts;
-                rawName = rawName.replace(/\\;/g, ';')
-                                 .replace(/\\\|/g, '|')
-                                 .replace(/\\\\/g, '\\');
+                    let [rawName, lat, lng, colorIdx] = parts;
+                    rawName = rawName.replace(/\\;/g, ';').replace(/\\\|/g, '|').replace(/\\\\/g, '\\');
 
-                const isAuto = rawName.startsWith('*');
-                return {
-                    name: isAuto ? rawName.slice(1) : rawName,
-                    lat: parseFloat(lat),
-                    lng: parseFloat(lng),
-                    color: PALETTE[parseInt(colorIdx)] || PALETTE[0],
-                    isAutoNamed: isAuto,
-                    loading: false,
-                    marker: null
-                };
-            }).filter((loc): loc is Location => loc !== null);
+                    const isAuto = rawName.startsWith('*');
+                    return {
+                        name: isAuto ? rawName.slice(1) : rawName,
+                        lat: parseFloat(lat),
+                        lng: parseFloat(lng),
+                        color: PALETTE[parseInt(colorIdx)] || PALETTE[0],
+                        isAutoNamed: isAuto,
+                        loading: false,
+                        marker: null,
+                    };
+                })
+                .filter((loc): loc is Location => loc !== null);
         } catch (e) {
             return [];
         }
