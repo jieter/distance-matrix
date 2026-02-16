@@ -26,22 +26,26 @@ class MarineState {
         $effect.root(() => {
             $effect(() => {
                 const serialized = this.locations.map(l => {
+                    if (l == null){
+                        return '';
+                    }
                     const name = l.isAutoNamed ? `*${l.name}` : l.name;
+                    const escapedName = name.replace(/\\/g, '\\\\')
+                                            .replace(/;/g, '\\;')
+                                            .replace(/\|/g, '\\|');
+
                     const lat = l.lat.toFixed(4);
                     const lng = l.lng.toFixed(4);
-                    // Store only the index of the color in our palette
                     const colorIdx = PALETTE.indexOf(l.color);
                     const c = colorIdx === -1 ? 0 : colorIdx;
 
-                    return `${name};${lat};${lng};${c}`;
+                    return `${escapedName};${lat};${lng};${c}`;
                 }).join('|');
 
-                const path = window.location.pathname;
                 const newHash = serialized ? `#${encodeURI(serialized)}` : '';
-                window.history.replaceState(null, '', path + newHash);
+                window.history.replaceState(null, '', window.location.pathname + newHash);
             });
         });
-
         window.addEventListener('hashchange', () => {
             const newLocs = this.#loadFromHash();
             if (this.#isDifferent(newLocs)) this.locations = newLocs;
@@ -52,21 +56,28 @@ class MarineState {
         try {
             const hash = decodeURI(window.location.hash.slice(1));
             if (!hash) return [];
+            const waypointStrings = hash.split(/(?<!\\)\|/);
+            return waypointStrings.map(str => {
+                // Split by ; only if NOT preceded by \
+                const parts = str.split(/(?<!\\);/);
+                if (parts.length < 4) return null;
 
-            return hash.split('|').map(str => {
-                const [rawName, lat, lng, colorIdx] = str.split(';');
+                let [rawName, lat, lng, colorIdx] = parts;
+                rawName = rawName.replace(/\\;/g, ';')
+                                 .replace(/\\\|/g, '|')
+                                 .replace(/\\\\/g, '\\');
+
                 const isAuto = rawName.startsWith('*');
                 return {
                     name: isAuto ? rawName.slice(1) : rawName,
                     lat: parseFloat(lat),
                     lng: parseFloat(lng),
-                    // Retrieve hex from palette using the index
                     color: PALETTE[parseInt(colorIdx)] || PALETTE[0],
                     isAutoNamed: isAuto,
                     loading: false,
                     marker: null
                 };
-            });
+            }).filter(Boolean);
         } catch (e) {
             return [];
         }
