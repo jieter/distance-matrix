@@ -1,14 +1,12 @@
 <script lang="ts">
 import { marineState, distance } from './state.svelte';
 
-// Configurable Mean Speed over Ground
 let speed = $state(5);
 
 function formatTtg(dog: number, sog: number) {
     if (!sog || sog <= 0) return '--';
     const totalHours = dog / sog;
     const h = Math.floor(totalHours);
-    // Added padStart so minutes always show two digits (e.g., 1:05)
     const m = Math.round((totalHours - h) * 60)
         .toString()
         .padStart(2, '0');
@@ -21,9 +19,13 @@ function formatTtg(dog: number, sog: number) {
         <table>
             <thead>
                 <tr>
-                    <th>Location</th>
+                    <th>SOG/TTG matrix</th>
                     {#each marineState.locations as loc, j}
-                        <th class:highlight-header={marineState.hoveredIndices.includes(j)} style="color: {loc.color}">
+                        <th
+                            class:highlight-header={marineState.hoveredIndices.includes(j)}
+                            style="border-top: 6px solid {loc.color};"
+                            onmouseenter={() => marineState.setHover(j)}
+                            onmouseleave={() => marineState.clearHover()}>
                             <span class="vertical-text">{loc.name}</span>
                         </th>
                     {/each}
@@ -53,16 +55,21 @@ function formatTtg(dog: number, sog: number) {
 
                         {#each marineState.locations as colLoc, j}
                             {@const distValue = distance(loc, colLoc)}
+                            {@const isDisabled = marineState.isLegDisabled(i, j)}
                             <td
                                 class:diagonal={i === j}
                                 class:dist={i !== j}
+                                class:is-disabled={isDisabled}
                                 class:highlight-cell={marineState.hoveredIndices.includes(i) &&
                                     marineState.hoveredIndices.includes(j) &&
                                     i !== j}
                                 onmouseenter={() => i !== j && marineState.setHover(i, j)}
-                                onmouseleave={() => marineState.clearHover()}>
+                                onmouseleave={() => marineState.clearHover()}
+                                onclick={() => i !== j && marineState.toggleLeg(i, j)}>
                                 {#if i === j}
                                     <span class="diagonal-mark">-</span>
+                                {:else if isDisabled}
+                                    <span class="void">X</span>
                                 {:else}
                                     <div class="cell-content">
                                         <div class="dist-val">{distValue}</div>
@@ -83,7 +90,7 @@ function formatTtg(dog: number, sog: number) {
             <input type="number" bind:value={speed} min="0.1" step="0.5" />
             <span class="unit">kts</span>
         </label>
-        <small>(Time to Go based on current distance)</small>
+        <button class="reset-btn" onclick={() => marineState.clearAll()}> Reset Session </button>
     </div>
 </div>
 
@@ -126,7 +133,22 @@ thead th:not(:first-child) {
     font-weight: bold;
     display: inline-block;
 }
+td.dist {
+    cursor: pointer; /* Indicate it's clickable */
+    transition: background-color 0.2s;
+}
 
+td.is-disabled {
+    background-color: #fdf2f2 !important; /* Light red tint */
+    color: #e0e6ed;
+}
+
+.void {
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #fab1a0;
+    text-transform: uppercase;
+}
 /* Layout within cells */
 .cell-content {
     display: flex;
@@ -165,9 +187,6 @@ thead th:not(:first-child) {
     font-size: 0.9rem;
     color: #666;
 }
-small {
-    color: #aaa;
-}
 
 /* Interactive States */
 .highlight-row,
@@ -203,6 +222,16 @@ small {
     cursor: pointer;
     width: 20px;
     height: 20px;
+}
+.reset-btn {
+    width: 120px;
+    cursor: pointer;
+    background: #ff7675;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    font-weight: bold;
 }
 
 /* Loader */

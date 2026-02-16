@@ -47,69 +47,82 @@ const PALETTE = [
 ];
 
 class MarineState {
-    locations = $state<Location[]>(this.#loadFromHash());
+    locations = $state<Location[]>([]);
     hoveredIndices = $state<number[]>([]);
+    disabledLegs = $state<Set<string>>(new Set());
 
     constructor() {
+        // 2. Parse hash immediately and assign to state before effects run
+        const initial = this.#loadFromHash();
+        this.locations = initial.locations;
+        this.disabledLegs = initial.disabledLegs;
+
         $effect.root(() => {
             $effect(() => {
-                const serialized = this.locations
-                    .map((l) => {
-                        if (l == null) {
-                            return '';
-                        }
-                        const name = l.isAutoNamed ? `*${l.name}` : l.name;
-                        const escapedName = name.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/\|/g, '\\|');
+                const serializedLocs = this.locations.map((l) => {
+                    const namePrefix = l.isAutoNamed ? '*' : '';
+                    const safeName = encodeURIComponent(l.name);
+                    const colorIdx = PALETTE.indexOf(l.color);
+                    return `${namePrefix}${safeName};${l.lat.toFixed(4)};${l.lng.toFixed(4)};${colorIdx === -1 ? 0 : colorIdx}`;
+                });
 
-                        const lat = l.lat.toFixed(4);
-                        const lng = l.lng.toFixed(4);
-                        const colorIdx = PALETTE.indexOf(l.color);
-                        const c = colorIdx === -1 ? 0 : colorIdx;
+                const serializedDisabled = Array.from(this.disabledLegs).map((key) => `~${key}`);
+                const combined = [...serializedLocs, ...serializedDisabled].join('|');
 
-                        return `${escapedName};${lat};${lng};${c}`;
-                    })
-                    .join('|');
-
-                const newHash = serialized ? `#${encodeURI(serialized)}` : '';
-                window.history.replaceState(null, '', window.location.pathname + newHash);
+                // Only update history if there is actually data, or if it was cleared manually
+                const newHash = combined ? `#${combined}` : '';
+                if (window.location.hash !== newHash) {
+                    window.history.replaceState(null, '', window.location.pathname + newHash);
+                }
             });
         });
+
         window.addEventListener('hashchange', () => {
-            const newLocs = this.#loadFromHash();
+            const { locations: newLocs, disabledLegs: newDisabled } = this.#loadFromHash();
             if (this.#isDifferent(newLocs)) {
                 this.locations = newLocs;
             }
+            // Sync disabled legs
+            this.disabledLegs = newDisabled;
         });
     }
 
-    #loadFromHash(): Location[] {
+    #loadFromHash(): { locations: Location[]; disabledLegs: Set<string> } {
         try {
-            const hash = decodeURI(window.location.hash.slice(1));
-            if (!hash) return [];
-            const waypointStrings = hash.split(/(?<!\\)\|/);
-            return waypointStrings
-                .map((str) => {
-                    // Split by ; only if NOT preceded by \
-                    const parts = str.split(/(?<!\\);/);
-                    if (parts.length < 4) return null;
+            const hash = decodeURIComponent(window.location.hash.slice(1));
+            if (!hash) return { locations: [], disabledLegs: new Set() };
 
-                    let [rawName, lat, lng, colorIdx] = parts;
-                    rawName = rawName.replace(/\\;/g, ';').replace(/\\\|/g, '|').replace(/\\\\/g, '\\');
+            const parts = hash.split('|');
+            const locations: Location[] = [];
+            const disabledLegs = new Set<string>();
 
+            parts.forEach((str) => {
+                if (str.startsWith('~')) {
+                    disabledLegs.add(str.slice(1));
+                } else {
+                    const segments = str.split(';');
+                    if (segments.length < 4) return;
+
+                    let [rawName, lat, lng, colorIdx] = segments;
                     const isAuto = rawName.startsWith('*');
-                    return {
-                        name: isAuto ? rawName.slice(1) : rawName,
+                    const cleanName = decodeURIComponent(isAuto ? rawName.slice(1) : rawName);
+
+                    locations.push({
+                        name: cleanName,
                         lat: parseFloat(lat),
                         lng: parseFloat(lng),
                         color: PALETTE[parseInt(colorIdx)] || PALETTE[0],
                         isAutoNamed: isAuto,
                         loading: false,
                         marker: null,
-                    };
-                })
-                .filter((loc): loc is Location => loc !== null);
+                    });
+                }
+            });
+
+            return { locations, disabledLegs };
         } catch (e) {
-            return [];
+            console.error('Hash parse error', e);
+            return { locations: [], disabledLegs: new Set() };
         }
     }
 
@@ -133,7 +146,7 @@ class MarineState {
             name: `Mark ${index + 1}`,
             lat: latlng.lat,
             lng: latlng.lng,
-            color: this.#generateColor(),
+            color: this.#getNextAvailableColor(),
             isAutoNamed: true,
             loading: false,
             marker: null,
@@ -165,9 +178,33 @@ class MarineState {
         this.locations = [];
     }
 
-    #generateColor() {
-        // Pick a random color from the fixed palette
-        return PALETTE[Math.floor(Math.random() * PALETTE.length)];
+    #getNextAvailableColor(): string {
+        const usedColors = new Set(this.locations.map((l) => l.color));
+        const nextColor = PALETTE.find((color) => !usedColors.has(color));
+        return nextColor || PALETTE[this.locations.length % PALETTE.length];
+    }
+    toggleLeg(i: number, j: number) {
+        const key = this.#getLegKey(i, j);
+
+        // Create a new Set to trigger Svelte's reactivity
+        const nextSet = new Set(this.disabledLegs);
+
+        if (nextSet.has(key)) {
+            nextSet.delete(key);
+        } else {
+            nextSet.add(key);
+        }
+
+        this.disabledLegs = nextSet;
+    }
+
+    isLegDisabled(i: number, j: number): boolean {
+        return this.disabledLegs.has(this.#getLegKey(i, j));
+    }
+
+    #getLegKey(i: number, j: number): string {
+        const [min, max] = [i, j].sort((a, b) => a - b);
+        return `${min}-${max}`;
     }
 
     async reverseGeocode(index: number) {
