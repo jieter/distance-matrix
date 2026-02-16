@@ -1,4 +1,17 @@
-export type Coord = { lat: number; lng: number };
+export type Coord = {
+    lat: number;
+    lng: number;
+};
+export type Location = Coord & {
+    name: string;
+    lat: number;
+    lng: number;
+    color: string;
+    isAutoNamed: boolean;
+    loading: boolean;
+    marker: any;
+};
+
 
 // Distance in nautical miles
 export function distance(coord1: Coord, coord2: Coord): number {
@@ -19,7 +32,7 @@ const PALETTE = [
 ];
 
 class MarineState {
-    locations = $state(this.#loadFromHash());
+    locations = $state<Location[]>(this.#loadFromHash());
     hoveredIndices = $state<number[]>([]);
 
     constructor() {
@@ -48,11 +61,13 @@ class MarineState {
         });
         window.addEventListener('hashchange', () => {
             const newLocs = this.#loadFromHash();
-            if (this.#isDifferent(newLocs)) this.locations = newLocs;
+            if (this.#isDifferent(newLocs)) {
+                this.locations = newLocs;
+            }
         });
     }
 
-    #loadFromHash() {
+    #loadFromHash(): Location[] {
         try {
             const hash = decodeURI(window.location.hash.slice(1));
             if (!hash) return [];
@@ -77,19 +92,27 @@ class MarineState {
                     loading: false,
                     marker: null
                 };
-            }).filter(Boolean);
+            }).filter((loc): loc is Location => loc !== null);
         } catch (e) {
             return [];
         }
     }
 
     // Helper to prevent infinite loops during state sync
-    #isDifferent(newLocs: any[]) {
-        return JSON.stringify(newLocs.map(l => l.name + l.lat + l.lng)) !==
-              JSON.stringify(this.locations.map(l => l.name + l.lat + l.lng));
+    #isDifferent(newLocs: Location[]): boolean {
+        if (newLocs.length !== this.locations.length) return true;
+
+        const serialize = (l: Location) => `${l.name}-${l.lat}-${l.lng}`;
+
+        return newLocs.some((location, i) => {
+            const current = this.locations[i];
+            // Standard guard clause for the 'null' error
+            if (!location || !current) return location !== current;
+            return serialize(location) !== serialize(current);
+        });
     }
 
-    addLocation(latlng: Coord) {
+    addLocation(latlng: Coord): void {
         const index = this.locations.length;
         const newLoc = {
             name: `Mark ${index + 1}`,
@@ -104,7 +127,7 @@ class MarineState {
         this.reverseGeocode(index);
     }
 
-    removeLocation(index: number) {
+    removeLocation(index: number): void {
         const loc = this.locations[index];
         if (loc.marker) loc.marker.remove();
         this.locations.splice(index, 1);
