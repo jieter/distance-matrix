@@ -1,3 +1,5 @@
+import L from 'leaflet';
+
 export type Coord = {
     lat: number;
     lng: number;
@@ -148,6 +150,20 @@ class MarineState {
             if (!mark || !current) return mark !== current;
             return serialize(mark) !== serialize(current);
         });
+    }
+
+    get bounds(): L.LatLngBounds | null {
+        if (this.marks.length === 0) return null;
+
+        // Create bounds from the first location and extend it with the rest
+        const initial = L.latLng(this.marks[0].lat, this.marks[0].lng);
+        const bounds = L.latLngBounds(initial, initial);
+
+        this.marks.forEach((mark) => {
+            bounds.extend([mark.lat, mark.lng]);
+        });
+
+        return bounds;
     }
 
     addMark(latlng: Coord): void {

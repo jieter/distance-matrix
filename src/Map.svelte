@@ -12,8 +12,6 @@ setContext('map-instance', () => map);
 
 onMount(() => {
     map = L.map(mapElement!).setView([52.37, 4.89], 6);
-    // Argument of type 'HTMLElement | null' is not assignable to parameter of type 'string | HTMLElement'.
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap',
@@ -26,6 +24,10 @@ onMount(() => {
     map.on('click', (e) => {
         marineState.addMark(e.latlng);
     });
+    const bounds = marineState.bounds;
+    if (bounds) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    }
 });
 </script>
 

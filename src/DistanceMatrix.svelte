@@ -93,6 +93,9 @@ function formatTtg(dog: number, sog: number) {
         <button class="reset-btn" onclick={() => marineState.clearAll()}> Reset Session </button>
 
         <a href="https://github.com/jieter/distance-matrix">GitHub</a>
+        <a
+            href="#*Enkhuizen;52.7055;5.3094;0_Stavoren;52.8809;5.3540;1_*Urk;52.6568;5.5925;2_*Lemmer;52.8376;5.7022;3_*Medemblik;52.7706;5.1138;4_Kornwederzand;53.0635;5.3428;5_~2-3_~3-5_~2-5"
+            >example</a>
     </div>
 </div>
 
