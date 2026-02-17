@@ -76,7 +76,7 @@ export class URLSerializer {
         if (!hash) return { locations, disabledLegs };
 
         // Handle URL decoding and split by primary separator
-        const parts = decodeURIComponent(hash.slice(1)).split(this.SEPARATOR);
+        const parts = decodeURIComponent(hash).split(this.SEPARATOR);
 
         parts.forEach((str) => {
             if (str.startsWith(this.DISABLED_PREFIX)) {
