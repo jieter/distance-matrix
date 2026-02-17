@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { URLSerializer } from './state.svelte'; // Adjust path
 
 describe('URLSerializer', () => {
-    const mockLocations = [
+    const mockMarks = [
         {
             name: 'London',
             lat: 51.5074,
@@ -24,8 +24,8 @@ describe('URLSerializer', () => {
     const mockDisabledLegs = new Set(['1-2']);
 
     describe('serialize', () => {
-        it('should correctly serialize locations and disabled legs', () => {
-            const result = URLSerializer.serialize(mockLocations as any, mockDisabledLegs);
+        it('should correctly serialize marks and disabled legs', () => {
+            const result = URLSerializer.serialize(mockMarks as any, mockDisabledLegs);
 
             expect(result).toBe('London;51.5074;-0.1278;0_*Paris;48.8566;2.3522;0_~1-2');
         });
@@ -40,9 +40,9 @@ describe('URLSerializer', () => {
     describe('deserialize', () => {
         it('should reconstruct the state from a serialized string', () => {
             const serialized = 'New York;40.7128;-74.0060;2_~leg-1';
-            const { locations, disabledLegs } = URLSerializer.deserialize(serialized);
+            const { marks: marks, disabledLegs } = URLSerializer.deserialize(serialized);
 
-            expect(locations).toEqual([
+            expect(marks).toEqual([
                 {
                     name: 'New York',
                     lat: 40.7128,
@@ -58,13 +58,13 @@ describe('URLSerializer', () => {
 
         it('should handle the auto-named prefix (*)', () => {
             const serialized = '*AutoCity;10;20;0';
-            const { locations } = URLSerializer.deserialize(serialized);
-            expect(locations[0].isAutoNamed).toBe(true);
-            expect(locations[0].name).toBe('AutoCity');
+            const { marks: marks } = URLSerializer.deserialize(serialized);
+            expect(marks[0].isAutoNamed).toBe(true);
+            expect(marks[0].name).toBe('AutoCity');
         });
 
         it('should return empty values for an empty string', () => {
-            const { locations, disabledLegs } = URLSerializer.deserialize('');
+            const { marks: locations, disabledLegs } = URLSerializer.deserialize('');
             expect(locations).toEqual([]);
             expect(disabledLegs.size).toBe(0);
         });
@@ -72,22 +72,22 @@ describe('URLSerializer', () => {
 
     describe('Round-trip Consistency', () => {
         it('should result in the same data after serializing and deserializing', () => {
-            const serialized = URLSerializer.serialize(mockLocations as any, mockDisabledLegs);
+            const serialized = URLSerializer.serialize(mockMarks as any, mockDisabledLegs);
             const deserialized = URLSerializer.deserialize(serialized);
 
-            expect(deserialized.locations[0].name).toBe(mockLocations[0].name);
-            expect(deserialized.locations[1].isAutoNamed).toBe(true);
+            expect(deserialized.marks[0].name).toBe(mockMarks[0].name);
+            expect(deserialized.marks[1].isAutoNamed).toBe(true);
             expect(deserialized.disabledLegs).toEqual(mockDisabledLegs);
         });
     });
 
     describe('fromHash', () => {
-        it('should read from window.location.hash', () => {
+        it('Should read from window.location.hash', () => {
             // Mock window.location
             vi.stubGlobal('location', { hash: '#Test;1;2;0' });
 
-            const { locations } = URLSerializer.fromHash();
-            expect(locations[0].name).toBe('Test');
+            const { marks } = URLSerializer.fromHash();
+            expect(marks[0].name).toBe('Test');
         });
     });
 });

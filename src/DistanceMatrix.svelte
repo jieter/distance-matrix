@@ -20,7 +20,7 @@ function formatTtg(dog: number, sog: number) {
             <thead>
                 <tr>
                     <th>SOG/TTG matrix</th>
-                    {#each marineState.locations as loc, j}
+                    {#each marineState.marks as loc, j}
                         <th
                             class:highlight-header={marineState.hoveredIndices.includes(j)}
                             style="border-top: 6px solid {loc.color};"
@@ -32,7 +32,7 @@ function formatTtg(dog: number, sog: number) {
                 </tr>
             </thead>
             <tbody>
-                {#each marineState.locations as loc, i}
+                {#each marineState.marks as loc, i}
                     <tr class:highlight-row={marineState.hoveredIndices.includes(i)}>
                         <td
                             style="border-left: 6px solid {loc.color}"
@@ -53,7 +53,7 @@ function formatTtg(dog: number, sog: number) {
                             </div>
                         </td>
 
-                        {#each marineState.locations as colLoc, j}
+                        {#each marineState.marks as colLoc, j}
                             {@const distValue = distance(loc, colLoc)}
                             {@const isDisabled = marineState.isLegDisabled(i, j)}
                             <td

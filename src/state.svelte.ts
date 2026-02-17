@@ -2,7 +2,7 @@ export type Coord = {
     lat: number;
     lng: number;
 };
-export type Location = Coord & {
+export type Mark = Coord & {
     name: string;
     lat: number;
     lng: number;
@@ -51,8 +51,8 @@ export class URLSerializer {
     static SEGMENT_SEP = ';';
     static DISABLED_PREFIX = '~';
 
-    static serialize(locations: Location[], disabledLegs: Set<string>): string {
-        const serializedLocs = locations.map((l) => {
+    static serialize(marks: Mark[], disabledLegs: Set<string>): string {
+        const serializedMarks = marks.map((l) => {
             const namePrefix = l.isAutoNamed ? '*' : '';
             const safeName = encodeURIComponent(l.name);
             const colorIdx = PALETTE.indexOf(l.color);
@@ -61,19 +61,19 @@ export class URLSerializer {
 
         const serializedDisabled = Array.from(disabledLegs).map((key) => `${this.DISABLED_PREFIX}${key}`);
 
-        return [...serializedLocs, ...serializedDisabled].join(this.SEPARATOR);
+        return [...serializedMarks, ...serializedDisabled].join(this.SEPARATOR);
     }
 
-    static fromHash(): { locations: Location[]; disabledLegs: Set<string> } {
+    static fromHash(): { marks: Mark[]; disabledLegs: Set<string> } {
         const hash = window.location.hash.slice(1);
         return this.deserialize(hash);
     }
 
-    static deserialize(hash: string): { locations: Location[]; disabledLegs: Set<string> } {
-        const locations: Location[] = [];
+    static deserialize(hash: string): { marks: Mark[]; disabledLegs: Set<string> } {
+        const marks: Mark[] = [];
         const disabledLegs = new Set<string>();
 
-        if (!hash) return { locations, disabledLegs };
+        if (!hash) return { marks: marks, disabledLegs };
 
         // Handle URL decoding and split by primary separator
         const parts = decodeURIComponent(hash).split(this.SEPARATOR);
@@ -89,7 +89,7 @@ export class URLSerializer {
                 const isAuto = rawName.startsWith('*');
                 const cleanName = decodeURIComponent(isAuto ? rawName.slice(1) : rawName);
 
-                locations.push({
+                marks.push({
                     name: cleanName,
                     lat: parseFloat(lat),
                     lng: parseFloat(lng),
@@ -101,23 +101,23 @@ export class URLSerializer {
             }
         });
 
-        return { locations, disabledLegs };
+        return { marks: marks, disabledLegs };
     }
 }
 
 class MarineState {
-    locations = $state<Location[]>([]);
+    marks = $state<Mark[]>([]);
     hoveredIndices = $state<number[]>([]);
     disabledLegs = $state<Set<string>>(new Set());
 
     constructor() {
-        const { locations, disabledLegs } = URLSerializer.fromHash();
-        this.locations = locations;
+        const { marks, disabledLegs } = URLSerializer.fromHash();
+        this.marks = marks;
         this.disabledLegs = disabledLegs;
 
         $effect.root(() => {
             $effect(() => {
-                const combined = URLSerializer.serialize(this.locations, this.disabledLegs);
+                const combined = URLSerializer.serialize(this.marks, this.disabledLegs);
 
                 // Only update history if there is actually data, or if it was cleared manually
                 const newHash = combined ? `#${combined}` : '';
@@ -128,31 +128,30 @@ class MarineState {
         });
 
         window.addEventListener('hashchange', () => {
-            const { locations: newLocs, disabledLegs: newDisabled } = URLSerializer.fromHash();
-            if (this.#isDifferent(newLocs)) {
-                this.locations = newLocs;
+            const { marks: newMarks, disabledLegs: newDisabled } = URLSerializer.fromHash();
+            if (this.#isDifferent(newMarks)) {
+                this.marks = newMarks;
             }
-            // Sync disabled legs
             this.disabledLegs = newDisabled;
         });
     }
 
     // Helper to prevent infinite loops during state sync
-    #isDifferent(newLocs: Location[]): boolean {
-        if (newLocs.length !== this.locations.length) return true;
+    #isDifferent(other: Mark[]): boolean {
+        if (other.length !== this.marks.length) return true;
 
-        const serialize = (l: Location) => `${l.name}-${l.lat}-${l.lng}`;
+        const serialize = (l: Mark) => `${l.name}-${l.lat}-${l.lng}`;
 
-        return newLocs.some((location, i) => {
-            const current = this.locations[i];
+        return other.some((mark, i) => {
+            const current = this.marks[i];
             // Standard guard clause for the 'null' error
-            if (!location || !current) return location !== current;
-            return serialize(location) !== serialize(current);
+            if (!mark || !current) return mark !== current;
+            return serialize(mark) !== serialize(current);
         });
     }
 
-    addLocation(latlng: Coord): void {
-        const index = this.locations.length;
+    addMark(latlng: Coord): void {
+        const index = this.marks.length;
         const newLoc = {
             name: `Mark ${index + 1}`,
             lat: latlng.lat,
@@ -162,19 +161,19 @@ class MarineState {
             loading: false,
             marker: null,
         };
-        this.locations.push(newLoc);
+        this.marks.push(newLoc);
         this.reverseGeocode(index);
     }
 
     removeLocation(index: number): void {
-        const loc = this.locations[index];
+        const loc = this.marks[index];
         if (loc.marker) loc.marker.remove();
-        this.locations.splice(index, 1);
+        this.marks.splice(index, 1);
     }
 
-    updateLocationPos(index: number, lat: number, lng: number) {
-        this.locations[index].lat = lat;
-        this.locations[index].lng = lng;
+    updateMarkPosition(index: number, lat: number, lng: number) {
+        this.marks[index].lat = lat;
+        this.marks[index].lng = lng;
     }
 
     setHover(i: number, j: number | null = null) {
@@ -186,13 +185,13 @@ class MarineState {
     }
 
     clearAll() {
-        this.locations = [];
+        this.marks = [];
     }
 
     #getNextAvailableColor(): string {
-        const usedColors = new Set(this.locations.map((l) => l.color));
+        const usedColors = new Set(this.marks.map((l) => l.color));
         const nextColor = PALETTE.find((color) => !usedColors.has(color));
-        return nextColor || PALETTE[this.locations.length % PALETTE.length];
+        return nextColor || PALETTE[this.marks.length % PALETTE.length];
     }
     toggleLeg(i: number, j: number) {
         const key = this.#getLegKey(i, j);
@@ -219,26 +218,26 @@ class MarineState {
     }
 
     async reverseGeocode(index: number) {
-        const loc = this.locations[index];
-        if (!loc) return;
+        const location = this.marks[index];
+        if (!location) return;
 
-        loc.loading = true;
+        location.loading = true;
         try {
             const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}`,
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}`,
             );
             const data = await res.json();
             if (data.address) {
                 const address = data.address;
-                const newName = address.city || address.water || address.town || address.state || loc.name;
+                const newName = address.city || address.water || address.town || address.state || location.name;
 
-                loc.name = newName;
-                loc.marker?.setTooltipContent(newName);
+                location.name = newName;
+                location.marker?.setTooltipContent(newName);
             }
         } catch (err) {
             console.error('Geocoding error:', err);
         } finally {
-            loc.loading = false;
+            location.loading = false;
         }
     }
 }

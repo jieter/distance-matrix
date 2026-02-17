@@ -1,14 +1,14 @@
-<script>
+<script lang="ts">
 import { getContext, onMount, onDestroy } from 'svelte';
 import L from 'leaflet';
 
-let { coords, color, style } = $props();
-const getMap = getContext('map-instance');
-let polyline;
+let { coords, style } = $props();
+const getMap: () => L.Map = getContext('map-instance');
+let polyline: L.Polyline | null = null;
 
 onMount(() => {
     const map = getMap();
-    polyline = L.polyline(coords, { color, ...style }).addTo(map);
+    polyline = L.polyline(coords, { ...style }).addTo(map);
 });
 
 // Reactively update the line when coordinates or style changes

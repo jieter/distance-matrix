@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 import Map from './Map.svelte';
 import Marker from './Marker.svelte';
 import Connection from './Connection.svelte';
@@ -8,7 +8,7 @@ import { marineState } from './state.svelte';
 // Derived logic for lines
 let connections = $derived.by(() => {
     const pairs = [];
-    const locs = marineState.locations;
+    const locs = marineState.marks;
 
     for (let i = 0; i < locs.length; i++) {
         for (let j = i + 1; j < locs.length; j++) {
@@ -29,7 +29,7 @@ let connections = $derived.by(() => {
     return pairs;
 });
 
-function getDynamicStyle(i, j) {
+function getDynamicStyle(i: number, j: number) {
     const indices = marineState.hoveredIndices;
     let isHighlighted = false;
     let targetColor = '#3388ff'; // Default Leaflet Blue
@@ -40,14 +40,14 @@ function getDynamicStyle(i, j) {
             isHighlighted = true;
             // The magic line: pick the color of the node that isn't the hovered one
             const targetIdx = i === hovered ? j : i;
-            targetColor = marineState.locations[targetIdx].color;
+            targetColor = marineState.marks[targetIdx].color;
         }
     } else if (indices.length === 2) {
         // Highlighting a specific cell in the table
         if (indices.includes(i) && indices.includes(j)) {
             isHighlighted = true;
             // In a cell hover, we usually treat the column (j) as the destination
-            targetColor = marineState.locations[j].color;
+            targetColor = marineState.marks[j].color;
         }
     }
 
@@ -63,12 +63,11 @@ function getDynamicStyle(i, j) {
 <main>
     <div id="map-side">
         <Map>
-            {#each marineState.locations as loc, i (loc)}
-                <Marker {loc} index={i} />
-            {/each}
-
             {#each connections as conn (conn.id)}
                 <Connection coords={conn.coords} style={getDynamicStyle(conn.i, conn.j)} />
+            {/each}
+            {#each marineState.marks as mark, i (mark)}
+                <Marker {mark} index={i} />
             {/each}
         </Map>
     </div>
