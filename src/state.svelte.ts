@@ -46,28 +46,78 @@ const PALETTE = [
     '#a9a9a9',
 ];
 
+export class URLSerializer {
+    static SEPARATOR = '_';
+    static SEGMENT_SEP = ';';
+    static DISABLED_PREFIX = '~';
+
+    static serialize(locations: Location[], disabledLegs: Set<string>): string {
+        const serializedLocs = locations.map((l) => {
+            const namePrefix = l.isAutoNamed ? '*' : '';
+            const safeName = encodeURIComponent(l.name);
+            const colorIdx = PALETTE.indexOf(l.color);
+            return `${namePrefix}${safeName}${this.SEGMENT_SEP}${l.lat.toFixed(4)}${this.SEGMENT_SEP}${l.lng.toFixed(4)}${this.SEGMENT_SEP}${colorIdx === -1 ? 0 : colorIdx}`;
+        });
+
+        const serializedDisabled = Array.from(disabledLegs).map((key) => `${this.DISABLED_PREFIX}${key}`);
+
+        return [...serializedLocs, ...serializedDisabled].join(this.SEPARATOR);
+    }
+
+    static fromHash(): { locations: Location[]; disabledLegs: Set<string> } {
+        const hash = window.location.hash.slice(1);
+        return this.deserialize(hash);
+    }
+
+    static deserialize(hash: string): { locations: Location[]; disabledLegs: Set<string> } {
+        const locations: Location[] = [];
+        const disabledLegs = new Set<string>();
+
+        if (!hash) return { locations, disabledLegs };
+
+        // Handle URL decoding and split by primary separator
+        const parts = decodeURIComponent(hash.slice(1)).split(this.SEPARATOR);
+
+        parts.forEach((str) => {
+            if (str.startsWith(this.DISABLED_PREFIX)) {
+                disabledLegs.add(str.slice(1));
+            } else {
+                const segments = str.split(this.SEGMENT_SEP);
+                if (segments.length < 4) return;
+
+                const [rawName, lat, lng, colorIdx] = segments;
+                const isAuto = rawName.startsWith('*');
+                const cleanName = decodeURIComponent(isAuto ? rawName.slice(1) : rawName);
+
+                locations.push({
+                    name: cleanName,
+                    lat: parseFloat(lat),
+                    lng: parseFloat(lng),
+                    color: PALETTE[parseInt(colorIdx)] || PALETTE[0],
+                    isAutoNamed: isAuto,
+                    loading: false,
+                    marker: null,
+                });
+            }
+        });
+
+        return { locations, disabledLegs };
+    }
+}
+
 class MarineState {
     locations = $state<Location[]>([]);
     hoveredIndices = $state<number[]>([]);
     disabledLegs = $state<Set<string>>(new Set());
 
     constructor() {
-        // 2. Parse hash immediately and assign to state before effects run
-        const initial = this.#loadFromHash();
-        this.locations = initial.locations;
-        this.disabledLegs = initial.disabledLegs;
+        const { locations, disabledLegs } = URLSerializer.fromHash();
+        this.locations = locations;
+        this.disabledLegs = disabledLegs;
 
         $effect.root(() => {
             $effect(() => {
-                const serializedLocs = this.locations.map((l) => {
-                    const namePrefix = l.isAutoNamed ? '*' : '';
-                    const safeName = encodeURIComponent(l.name);
-                    const colorIdx = PALETTE.indexOf(l.color);
-                    return `${namePrefix}${safeName};${l.lat.toFixed(4)};${l.lng.toFixed(4)};${colorIdx === -1 ? 0 : colorIdx}`;
-                });
-
-                const serializedDisabled = Array.from(this.disabledLegs).map((key) => `~${key}`);
-                const combined = [...serializedLocs, ...serializedDisabled].join('|');
+                const combined = URLSerializer.serialize(this.locations, this.disabledLegs);
 
                 // Only update history if there is actually data, or if it was cleared manually
                 const newHash = combined ? `#${combined}` : '';
@@ -78,52 +128,13 @@ class MarineState {
         });
 
         window.addEventListener('hashchange', () => {
-            const { locations: newLocs, disabledLegs: newDisabled } = this.#loadFromHash();
+            const { locations: newLocs, disabledLegs: newDisabled } = URLSerializer.fromHash();
             if (this.#isDifferent(newLocs)) {
                 this.locations = newLocs;
             }
             // Sync disabled legs
             this.disabledLegs = newDisabled;
         });
-    }
-
-    #loadFromHash(): { locations: Location[]; disabledLegs: Set<string> } {
-        try {
-            const hash = decodeURIComponent(window.location.hash.slice(1));
-            if (!hash) return { locations: [], disabledLegs: new Set() };
-
-            const parts = hash.split('|');
-            const locations: Location[] = [];
-            const disabledLegs = new Set<string>();
-
-            parts.forEach((str) => {
-                if (str.startsWith('~')) {
-                    disabledLegs.add(str.slice(1));
-                } else {
-                    const segments = str.split(';');
-                    if (segments.length < 4) return;
-
-                    let [rawName, lat, lng, colorIdx] = segments;
-                    const isAuto = rawName.startsWith('*');
-                    const cleanName = decodeURIComponent(isAuto ? rawName.slice(1) : rawName);
-
-                    locations.push({
-                        name: cleanName,
-                        lat: parseFloat(lat),
-                        lng: parseFloat(lng),
-                        color: PALETTE[parseInt(colorIdx)] || PALETTE[0],
-                        isAutoNamed: isAuto,
-                        loading: false,
-                        marker: null,
-                    });
-                }
-            });
-
-            return { locations, disabledLegs };
-        } catch (e) {
-            console.error('Hash parse error', e);
-            return { locations: [], disabledLegs: new Set() };
-        }
     }
 
     // Helper to prevent infinite loops during state sync
