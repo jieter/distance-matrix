@@ -91,6 +91,8 @@ function formatTtg(dog: number, sog: number) {
             <span class="unit">kts</span>
         </label>
         <button class="reset-btn" onclick={() => marineState.clearAll()}> Reset Session </button>
+
+        <a href="https://github.com/jieter/distance-matrix">GitHub</a>
     </div>
 </div>
 
