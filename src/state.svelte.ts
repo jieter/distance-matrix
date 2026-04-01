@@ -116,6 +116,9 @@ class MarineState {
         const { marks, disabledLegs } = URLSerializer.fromHash();
         this.marks = marks;
         this.disabledLegs = disabledLegs;
+        if (marks.length > 0) {
+            this.hoveredIndices = [0];
+        }
 
         $effect.root(() => {
             $effect(() => {
