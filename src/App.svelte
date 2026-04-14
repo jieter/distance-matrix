@@ -4,6 +4,7 @@ import Marker from './Marker.svelte';
 import Connection from './Connection.svelte';
 import DistanceMatrix from './DistanceMatrix.svelte';
 import { marineState } from './state.svelte';
+import type { PathOptions } from 'leaflet';
 
 // Connections between marks (excluding those which are disabled), with derived style
 let connections = $derived.by(() => {
@@ -19,7 +20,7 @@ let connections = $derived.by(() => {
                         [marks[i].lat, marks[i].lng],
                         [marks[j].lat, marks[j].lng],
                     ],
-                    style: getDynamicStyle(i, j),
+                    style: getConnectionStyle(i, j),
                 });
             }
         }
@@ -27,7 +28,7 @@ let connections = $derived.by(() => {
     return pairs;
 });
 
-function getDynamicStyle(i: number, j: number) {
+function getConnectionStyle(i: number, j: number): PathOptions {
     const indices = marineState.hoveredIndices;
     let isHighlighted = false;
     let targetColor = '#222';
@@ -51,7 +52,7 @@ function getDynamicStyle(i: number, j: number) {
         color: targetColor,
         weight: isHighlighted ? 4 : 1,
         opacity: isHighlighted ? 1 : 0.6,
-        dashArray: isHighlighted ? null : '5, 3',
+        dashArray: isHighlighted ? undefined : '5, 3',
     };
 }
 </script>
