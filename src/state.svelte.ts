@@ -6,8 +6,6 @@ export type Coord = {
 };
 export type Mark = Coord & {
     name: string;
-    lat: number;
-    lng: number;
     color: string;
     isAutoNamed: boolean;
     loading: boolean;
