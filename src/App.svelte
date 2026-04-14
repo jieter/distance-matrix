@@ -5,7 +5,7 @@ import Connection from './Connection.svelte';
 import DistanceMatrix from './DistanceMatrix.svelte';
 import { marineState } from './state.svelte';
 
-// Connections between marks (excluding those which are disabled)
+// Connections between marks (excluding those which are disabled), with derived style
 let connections = $derived.by(() => {
     const pairs = [];
     const marks = marineState.marks;
@@ -13,11 +13,14 @@ let connections = $derived.by(() => {
     for (let i = 0; i < marks.length; i++) {
         for (let j = i + 1; j < marks.length; j++) {
             if (!marineState.isLegDisabled(i, j)) {
-                const coords = [
-                    [marks[i].lat, marks[i].lng],
-                    [marks[j].lat, marks[j].lng],
-                ];
-                pairs.push({ i, j, id: `line-${i}-${j}`, coords: coords });
+                pairs.push({
+                    id: `line-${i}-${j}`,
+                    coords: [
+                        [marks[i].lat, marks[i].lng],
+                        [marks[j].lat, marks[j].lng],
+                    ],
+                    style: getDynamicStyle(i, j),
+                });
             }
         }
     }
@@ -34,8 +37,7 @@ function getDynamicStyle(i: number, j: number) {
         const hovered = indices[0];
         if (i === hovered || j === hovered) {
             isHighlighted = true;
-            const targetIndex = i === hovered ? j : i;
-            targetColor = marineState.marks[targetIndex].color;
+            targetColor = marineState.marks[i === hovered ? j : i].color;
         }
     } else if (indices.length === 2) {
         // Highlighting a specific connection (when hovering a cell in the table)
@@ -58,7 +60,7 @@ function getDynamicStyle(i: number, j: number) {
     <div id="map-side">
         <Map>
             {#each connections as conn (conn.id)}
-                <Connection coords={conn.coords} style={getDynamicStyle(conn.i, conn.j)} />
+                <Connection coords={conn.coords} style={conn.style} />
             {/each}
             {#each marineState.marks as mark, i (mark)}
                 <Marker {mark} index={i} />

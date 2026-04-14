@@ -11,7 +11,6 @@ export type Mark = Coord & {
     color: string;
     isAutoNamed: boolean;
     loading: boolean;
-    marker: any;
 };
 
 // Distance in nautical miles
@@ -98,7 +97,6 @@ export class URLSerializer {
                     color: PALETTE[parseInt(colorIdx)] || PALETTE[0],
                     isAutoNamed: isAuto,
                     loading: false,
-                    marker: null,
                 });
             }
         });
@@ -178,15 +176,12 @@ class MarineState {
             color: this.#getNextAvailableColor(),
             isAutoNamed: true,
             loading: false,
-            marker: null,
         };
         this.marks.push(newLoc);
         this.reverseGeocode(index);
     }
 
     removeMark(index: number): void {
-        const loc = this.marks[index];
-        if (loc.marker) loc.marker.remove();
         this.marks.splice(index, 1);
     }
 
@@ -251,7 +246,6 @@ class MarineState {
                 const newName = address.city || address.water || address.town || address.state || location.name;
 
                 location.name = newName;
-                location.marker?.setTooltipContent(newName);
             }
         } catch (err) {
             console.error('Geocoding error:', err);
