@@ -23,7 +23,7 @@ export function distance(coord1: Coord, coord2: Coord): number {
     return Math.round(R * c);
 }
 const PALETTE = [
-    '#e6194B',
+    '#e6194b',
     '#3cb44b',
     '#ffe119',
     '#4363d8',
@@ -183,7 +183,7 @@ class MarineState {
         this.marks.splice(index, 1);
     }
 
-    updateMarkPosition(index: number, latlng: L.LatLng) {
+    updateMarkPosition(index: number, latlng: Coord) {
         this.marks[index].lat = latlng.lat;
         this.marks[index].lng = latlng.lng;
     }

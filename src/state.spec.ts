@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
-import { describe, it, expect, vi } from 'vitest';
-import { URLSerializer } from './state.svelte'; // Adjust path
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { URLSerializer, distance, marineState } from './state.svelte';
 
 describe('URLSerializer', () => {
     const mockMarks = [
@@ -27,7 +27,7 @@ describe('URLSerializer', () => {
         it('should correctly serialize marks and disabled legs', () => {
             const result = URLSerializer.serialize(mockMarks as any, mockDisabledLegs);
 
-            expect(result).toBe('London;51.5074;-0.1278;0_*Paris;48.8566;2.3522;0_~1-2');
+            expect(result).toBe('London;51.5074;-0.1278;0_*Paris;48.8566;2.3522;1_~1-2');
         });
 
         it('should handle special characters in names', () => {
@@ -49,7 +49,6 @@ describe('URLSerializer', () => {
                     lng: -74.006,
                     color: '#ffe119',
                     loading: false,
-                    marker: null,
                     isAutoNamed: false,
                 },
             ]);
@@ -88,6 +87,129 @@ describe('URLSerializer', () => {
 
             const { marks } = URLSerializer.fromHash();
             expect(marks[0].name).toBe('Test');
+        });
+    });
+});
+
+describe('distance', () => {
+    it('returns 0 for identical coordinates', () => {
+        expect(distance({ lat: 52, lng: 4 }, { lat: 52, lng: 4 })).toBe(0);
+    });
+
+    it('calculates nautical miles between IJmuiden and Lowestoft (~103 nm)', () => {
+        const ijmuiden = { lat: 52.4633, lng: 4.5722 };
+        const lowestoft = { lat: 52.4833, lng: 1.75 };
+        expect(distance(ijmuiden, lowestoft)).toBeCloseTo(103, -1);
+    });
+
+    it('is symmetric (A→B equals B→A)', () => {
+        const a = { lat: 51.5, lng: -0.12 };
+        const b = { lat: 48.85, lng: 2.35 };
+        expect(distance(a, b)).toBe(distance(b, a));
+    });
+});
+
+describe('MarineState', () => {
+    beforeEach(() => {
+        marineState.clearAll();
+        marineState.disabledLegs = new Set();
+        vi.restoreAllMocks();
+    });
+
+    describe('mark lifecycle', () => {
+        it('addMark appends a mark with the given coordinates', () => {
+            marineState.addMark({ lat: 52.0, lng: 4.0 });
+            expect(marineState.marks).toHaveLength(1);
+            expect(marineState.marks[0].lat).toBe(52.0);
+            expect(marineState.marks[0].lng).toBe(4.0);
+        });
+
+        it('addMark assigns unique colors to consecutive marks', () => {
+            marineState.addMark({ lat: 0, lng: 0 });
+            marineState.addMark({ lat: 1, lng: 1 });
+            expect(marineState.marks[0].color).not.toBe(marineState.marks[1].color);
+        });
+
+        it('removeMark removes the correct mark by index', () => {
+            marineState.addMark({ lat: 0, lng: 0 });
+            marineState.addMark({ lat: 1, lng: 1 });
+            const secondColor = marineState.marks[1].color;
+            marineState.removeMark(0);
+            expect(marineState.marks).toHaveLength(1);
+            expect(marineState.marks[0].color).toBe(secondColor);
+        });
+
+        it('updateMarkPosition updates lat/lng in place', () => {
+            marineState.addMark({ lat: 0, lng: 0 });
+            marineState.updateMarkPosition(0, { lat: 10, lng: 20 } as any);
+            expect(marineState.marks[0].lat).toBe(10);
+            expect(marineState.marks[0].lng).toBe(20);
+        });
+    });
+
+    describe('leg management', () => {
+        it('toggleLeg disables a leg', () => {
+            marineState.toggleLeg(0, 1);
+            expect(marineState.isLegDisabled(0, 1)).toBe(true);
+        });
+
+        it('toggleLeg re-enables a disabled leg', () => {
+            marineState.toggleLeg(0, 1);
+            marineState.toggleLeg(0, 1);
+            expect(marineState.isLegDisabled(0, 1)).toBe(false);
+        });
+
+        it('isLegDisabled is order-independent (i,j same as j,i)', () => {
+            marineState.toggleLeg(1, 3);
+            expect(marineState.isLegDisabled(3, 1)).toBe(true);
+        });
+    });
+
+    describe('hover', () => {
+        it('setHover with one index sets single highlight', () => {
+            marineState.setHover(2);
+            expect(marineState.hoveredIndices).toEqual([2]);
+        });
+
+        it('setHover with two indices sets cell highlight', () => {
+            marineState.setHover(1, 3);
+            expect(marineState.hoveredIndices).toEqual([1, 3]);
+        });
+
+        it('clearHover empties hoveredIndices', () => {
+            marineState.setHover(0);
+            marineState.clearHover();
+            expect(marineState.hoveredIndices).toEqual([]);
+        });
+    });
+
+    describe('reverseGeocode', () => {
+        it('sets mark name from city field', async () => {
+            vi.stubGlobal('fetch', async () => ({
+                json: async () => ({ address: { city: 'Amsterdam' } }),
+            }));
+            marineState.addMark({ lat: 52.37, lng: 4.89 });
+            await marineState.reverseGeocode(0);
+            expect(marineState.marks[0].name).toBe('Amsterdam');
+        });
+
+        it('falls back to water when city is absent', async () => {
+            vi.stubGlobal('fetch', async () => ({
+                json: async () => ({ address: { water: 'North Sea' } }),
+            }));
+            marineState.addMark({ lat: 55, lng: 3 });
+            await marineState.reverseGeocode(0);
+            expect(marineState.marks[0].name).toBe('North Sea');
+        });
+
+        it('keeps original name on fetch error', async () => {
+            vi.stubGlobal('fetch', async () => {
+                throw new Error('network');
+            });
+            marineState.addMark({ lat: 0, lng: 0 });
+            const original = marineState.marks[0].name;
+            await marineState.reverseGeocode(0);
+            expect(marineState.marks[0].name).toBe(original);
         });
     });
 });
