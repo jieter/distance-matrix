@@ -9,14 +9,14 @@ describe('URLSerializer', () => {
             name: 'London',
             lat: 51.5074,
             lng: -0.1278,
-            color: '#e6194B',
+            color: '#e6194b',
             isAutoNamed: false,
         },
         {
             name: 'Paris',
             lat: 48.8566,
             lng: 2.3522,
-            color: '#3cb44b0',
+            color: '#3cb44b',
             isAutoNamed: true,
         },
     ];

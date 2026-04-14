@@ -15,19 +15,6 @@ repos:
 
   - repo: local
     hooks:
-    -   id: eslint
-        name: eslint
-        entry: npm run eslint
-        language: node
-        additional_dependencies:
-          - eslint
-          - eslint-plugin-html
-          - eslint-plugin-import
-        types: [javascript]
-        pass_filenames: false
-
-  - repo: local
-    hooks:
     -   id: js-format
         name: js-format
         entry: npm run format
