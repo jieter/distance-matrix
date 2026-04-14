@@ -81,4 +81,15 @@ main {
     flex: 1;
     position: relative;
 }
+
+@media (max-width: 768px) {
+    main {
+        flex-direction: column;
+    }
+
+    #map-side {
+        flex: 1;
+        min-height: 0;
+    }
+}
 </style>

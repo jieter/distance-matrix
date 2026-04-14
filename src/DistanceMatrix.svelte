@@ -103,7 +103,13 @@ function formatTtg(dog: number, sog: number) {
 #table-container {
     display: flex;
     flex-direction: column;
-    height: 100%; /* Or your desired fixed height */
+    height: 100%;
+}
+
+@media (max-width: 768px) {
+    #table-container {
+        height: 50vh;
+    }
 }
 
 #table-side {
