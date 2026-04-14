@@ -28,6 +28,15 @@ onMount(() => {
     if (bounds) {
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
     }
+
+    $effect(() => {
+        // Re-fit whenever a new state is loaded via hash change (browser back/forward)
+        marineState.fitBoundsRequest;
+        const newBounds = marineState.bounds;
+        if (newBounds) {
+            map!.fitBounds(newBounds, { padding: [50, 50], maxZoom: 12 });
+        }
+    });
 });
 </script>
 

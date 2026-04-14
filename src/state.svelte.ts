@@ -107,6 +107,7 @@ class MarineState {
     marks = $state<Mark[]>([]);
     hoveredIndices = $state<number[]>([]);
     disabledLegs = $state<Set<string>>(new Set());
+    fitBoundsRequest = $state(0);
 
     constructor() {
         const { marks, disabledLegs } = URLSerializer.fromHash();
@@ -132,6 +133,7 @@ class MarineState {
             const { marks: newMarks, disabledLegs: newDisabled } = URLSerializer.fromHash();
             if (this.#isDifferent(newMarks)) {
                 this.marks = newMarks;
+                this.fitBoundsRequest++;
             }
             this.disabledLegs = newDisabled;
         });
