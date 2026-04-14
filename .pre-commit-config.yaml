@@ -1,0 +1,46 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+     - id: trailing-whitespace
+     - id: end-of-file-fixer
+       exclude: "svg$"
+     - id: check-yaml
+     - id: check-json
+       exclude: "tsconfig.json"
+     - id: debug-statements
+     - id: check-added-large-files
+
+  - repo: local
+    hooks:
+    -   id: eslint
+        name: eslint
+        entry: npm run eslint
+        language: node
+        additional_dependencies:
+          - eslint
+          - eslint-plugin-html
+          - eslint-plugin-import
+        types: [javascript]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+    -   id: js-format
+        name: js-format
+        entry: npm run format
+        language: node
+        additional_dependencies: [prettier]
+        types: [javascript]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+    -   id: type-check
+        name: type-check
+        entry: npm run check
+        language: node
+        pass_filenames: false
+        types_or: [ts, svelte]
