@@ -47,7 +47,7 @@ function formatTtg(dog: number, sog: number) {
                                         loc.isAutoNamed = false;
                                         loc.marker?.setTooltipContent(loc.name);
                                     }} />
-                                <button class="del" onclick={() => marineState.removeLocation(i)} aria-label="Delete">
+                                <button class="del" onclick={() => marineState.removeMark(i)} aria-label="Delete">
                                     &times;
                                 </button>
                             </div>

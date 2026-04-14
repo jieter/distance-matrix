@@ -23,8 +23,8 @@ onMount(() => {
         .bindTooltip(mark.name, { permanent: false, direction: 'top' });
 
     marker.on('drag', (e) => {
-        const { lat, lng } = (e.target as L.Marker).getLatLng();
-        marineState.updateMarkPosition(index, lat, lng);
+        const latlng = (e.target as L.Marker).getLatLng();
+        marineState.updateMarkPosition(index, latlng);
     });
 
     marker.on('dragend', () => {

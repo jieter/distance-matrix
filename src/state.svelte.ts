@@ -184,15 +184,15 @@ class MarineState {
         this.reverseGeocode(index);
     }
 
-    removeLocation(index: number): void {
+    removeMark(index: number): void {
         const loc = this.marks[index];
         if (loc.marker) loc.marker.remove();
         this.marks.splice(index, 1);
     }
 
-    updateMarkPosition(index: number, lat: number, lng: number) {
-        this.marks[index].lat = lat;
-        this.marks[index].lng = lng;
+    updateMarkPosition(index: number, latlng: L.LatLng) {
+        this.marks[index].lat = latlng.lat;
+        this.marks[index].lng = latlng.lng;
     }
 
     setHover(i: number, j: number | null = null) {
