@@ -5,24 +5,25 @@ import { marineState } from './state.svelte';
 
 let { mark, index } = $props();
 const getMap: () => L.Map = getContext('map-instance');
-let marker: L.CircleMarker | null = null;
+let marker: L.Marker | null = null;
 
 onMount(() => {
     const map = getMap();
-    marker = L.circleMarker([mark.lat, mark.lng], {
-        radius: 7,
-        fillColor: mark.color,
-        fillOpacity: 1,
-        color: 'white',
-        weight: 2,
-        interactive: true,
-    })
+
+    const icon = L.divIcon({
+        className: '',
+        html: `<div class="circle-marker" style="background:${mark.color}"></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+        tooltipAnchor: [0, -9],
+    });
+
+    marker = L.marker([mark.lat, mark.lng], { icon, draggable: true })
         .addTo(map)
-        .bindTooltip(mark.name);
+        .bindTooltip(mark.name, { permanent: false, direction: 'top' });
 
     marker.on('drag', (e) => {
-        const { lat, lng } = e.target.getLatLng();
-        // Use the state method instead of mutating the prop
+        const { lat, lng } = (e.target as L.Marker).getLatLng();
         marineState.updateMarkPosition(index, lat, lng);
     });
 

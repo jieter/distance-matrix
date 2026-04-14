@@ -43,4 +43,17 @@ onMount(() => {
     width: 100%;
     background: #aad3df;
 }
+
+:global(.circle-marker) {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-sizing: border-box;
+    cursor: grab;
+}
+
+:global(.leaflet-dragging .circle-marker) {
+    cursor: grabbing;
+}
 </style>
