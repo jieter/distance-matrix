@@ -230,25 +230,28 @@ class MarineState {
     }
 
     async reverseGeocode(index: number) {
-        const location = this.marks[index];
-        if (!location) return;
+        const mark = this.marks[index];
+        if (!mark) return;
 
-        location.loading = true;
+        mark.loading = true;
         try {
             const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}`,
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${mark.lat}&lon=${mark.lng}`,
             );
+            // Silently ignore non-OK responses; the mark keeps its current name.
+            if (!res.ok) return;
             const data = await res.json();
             if (data.address) {
                 const address = data.address;
-                const newName = address.city || address.water || address.town || address.state || location.name;
+                const newName = address.city || address.water || address.town || address.state || mark.name;
 
-                location.name = newName;
+                mark.name = newName;
             }
         } catch (err) {
+            // Geocoding failures are non-fatal; the mark keeps its current name.
             console.error('Geocoding error:', err);
         } finally {
-            location.loading = false;
+            mark.loading = false;
         }
     }
 }

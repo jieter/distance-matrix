@@ -1,16 +1,17 @@
 /** @vitest-environment jsdom */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { URLSerializer, distance, marineState } from './state.svelte';
+import { URLSerializer, distance, marineState, type Mark } from './state.svelte';
 
 describe('URLSerializer', () => {
-    const mockMarks = [
+    const mockMarks: Mark[] = [
         {
             name: 'London',
             lat: 51.5074,
             lng: -0.1278,
             color: '#e6194b',
             isAutoNamed: false,
+            loading: false,
         },
         {
             name: 'Paris',
@@ -18,6 +19,7 @@ describe('URLSerializer', () => {
             lng: 2.3522,
             color: '#3cb44b',
             isAutoNamed: true,
+            loading: false,
         },
     ];
 
@@ -25,14 +27,14 @@ describe('URLSerializer', () => {
 
     describe('serialize', () => {
         it('should correctly serialize marks and disabled legs', () => {
-            const result = URLSerializer.serialize(mockMarks as any, mockDisabledLegs);
+            const result = URLSerializer.serialize(mockMarks, mockDisabledLegs);
 
             expect(result).toBe('London;51.5074;-0.1278;0_*Paris;48.8566;2.3522;1_~1-2');
         });
 
         it('should handle special characters in names', () => {
-            const loc = [{ name: 'A & B', lat: 0, lng: 0, color: '#FF0000', isAutoNamed: false }];
-            const result = URLSerializer.serialize(loc as any, new Set());
+            const loc: Mark[] = [{ name: 'A & B', lat: 0, lng: 0, color: '#FF0000', isAutoNamed: false, loading: false }];
+            const result = URLSerializer.serialize(loc, new Set());
             expect(result).toContain('A%20%26%20B');
         });
     });
@@ -71,7 +73,7 @@ describe('URLSerializer', () => {
 
     describe('Round-trip Consistency', () => {
         it('should result in the same data after serializing and deserializing', () => {
-            const serialized = URLSerializer.serialize(mockMarks as any, mockDisabledLegs);
+            const serialized = URLSerializer.serialize(mockMarks, mockDisabledLegs);
             const deserialized = URLSerializer.deserialize(serialized);
 
             expect(deserialized.marks[0].name).toBe(mockMarks[0].name);
@@ -141,7 +143,7 @@ describe('MarineState', () => {
 
         it('updateMarkPosition updates lat/lng in place', () => {
             marineState.addMark({ lat: 0, lng: 0 });
-            marineState.updateMarkPosition(0, { lat: 10, lng: 20 } as any);
+            marineState.updateMarkPosition(0, { lat: 10, lng: 20 });
             expect(marineState.marks[0].lat).toBe(10);
             expect(marineState.marks[0].lng).toBe(20);
         });
@@ -186,6 +188,7 @@ describe('MarineState', () => {
     describe('reverseGeocode', () => {
         it('sets mark name from city field', async () => {
             vi.stubGlobal('fetch', async () => ({
+                ok: true,
                 json: async () => ({ address: { city: 'Amsterdam' } }),
             }));
             marineState.addMark({ lat: 52.37, lng: 4.89 });
@@ -195,6 +198,7 @@ describe('MarineState', () => {
 
         it('falls back to water when city is absent', async () => {
             vi.stubGlobal('fetch', async () => ({
+                ok: true,
                 json: async () => ({ address: { water: 'North Sea' } }),
             }));
             marineState.addMark({ lat: 55, lng: 3 });
@@ -210,6 +214,16 @@ describe('MarineState', () => {
             const original = marineState.marks[0].name;
             await marineState.reverseGeocode(0);
             expect(marineState.marks[0].name).toBe(original);
+            expect(marineState.marks[0].loading).toBe(false);
+        });
+
+        it('keeps original name and clears loading on non-OK response', async () => {
+            vi.stubGlobal('fetch', async () => ({ ok: false, status: 429 }));
+            marineState.addMark({ lat: 0, lng: 0 });
+            const original = marineState.marks[0].name;
+            await marineState.reverseGeocode(0);
+            expect(marineState.marks[0].name).toBe(original);
+            expect(marineState.marks[0].loading).toBe(false);
         });
     });
 });
